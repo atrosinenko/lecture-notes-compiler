@@ -1,0 +1,31 @@
+The module `toc` from `lib` rewrites trivial Table of Contents
+description explained in the readme file in the form suitable for
+processing by utilities working with output formats (such as PDF).
+
+To convert TOC to some specific format one should call `generate_toc`
+with the following arguments:
+* `input_file_name` -- the name of TOC file in simple format described
+  in the readme
+* `output_file_name` -- the name of file to write output to
+* `entry_writer` -- function to be called on each top-level TOC entry
+* `header` -- header of the output file
+* `footer` -- footer of the output file
+
+The `entry_writer` should be a function accepting 3 arguments:
+* output file (not name)
+* current nesting level (0-based)
+* TOC subtree
+
+TOC subtree is [page_number, title, subsubtree, subsubtree, ...].
+For example:
+[1, "Chapter 1",
+    [2, "Page 2"],
+    [2, "Subchapter 1",
+        [3, "Some other caption"]
+    ]
+]
+
+`generate_toc` calls function given as its `entry_writer` argument
+for every **top-level** TOC entry, so it always passes 0 as its second
+argument. This argument is supposed to be used by subsequent recursive
+`entry_writer` calls.
