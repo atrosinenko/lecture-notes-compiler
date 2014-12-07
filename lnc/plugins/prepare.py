@@ -203,7 +203,8 @@ def get_tasks(conf, target):
                 "transform-file": os.path.join(input_file_dir,
                                                transform_file)
             }
-        if needs_update(x["input"], x["output"]):
+        if (needs_update(x["input"], x["output"]) or
+            needs_update(x["transform-file"], x["output"])):
             res.append(x)
     return res
 
