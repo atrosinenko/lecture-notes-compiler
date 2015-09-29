@@ -97,7 +97,7 @@ def _read_toc(toc_file):
             ]
         ],
         [10, "Chapter 2",
-            [12, "Ahother page"]
+            [12, "Another page"]
         ],
         ...
     ]

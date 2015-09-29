@@ -17,7 +17,7 @@ _COMMAND_EXECUTION_FAILURE = _("Some problems with '{command}' "
 
 
 def cmd_run(command_line_list, fail_msg=None):
-    """Runs the command specified be 'command_line_list' list and shows errors and raises
+    """Runs the command specified by 'command_line_list' list and shows errors and raises
     ExtCommandError if not found or on non-zero error code.
     """
     if not fail_msg:
