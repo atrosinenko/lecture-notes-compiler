@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 
 import ConfigParser
 
-from lnc.lib.exceptions import ProgramError, PluginError
+from lnc.lib.exceptions import PluginError
 
 
 def get_plugin(conf, target):
@@ -14,7 +14,7 @@ def get_plugin(conf, target):
         try:
             plugname = conf.get(target, "__plugin__")
         except ConfigParser.Error as err:
-            raise ProgramError(_("There are problems with option '__plugin__' "
+            raise PluginError(_("There are problems with option '__plugin__' "
                                  "in the '{target}' section:\n{error}")
                                .format(target=target, error=err))
     else:
