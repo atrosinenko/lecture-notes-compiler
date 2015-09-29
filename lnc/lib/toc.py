@@ -66,7 +66,7 @@ def _parse_file(f, encoding):
     return ret
 
 
-def _read_toc(toc_file):
+def read_toc(toc_file):
     """Reads Table of Contents from the given file object 'f'.
     Each line in file should be in form
     <'*' x level> <page number> <description>
@@ -146,7 +146,7 @@ def generate_toc(input_file_name, output_file_name, entry_writer,
     """
     try:
         with open(input_file_name, "rt") as input_file:
-            toc = _read_toc(input_file)
+            toc = read_toc(input_file)
     except IOError as err:
         raise ProgramError(_TOC_READ_ERROR_MSG.format(file=input_file_name,
                                                      error=err))
