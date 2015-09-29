@@ -38,6 +38,13 @@ def _get_option(conf, target, option, default=None, func=None):
 
 
 def check_target_options(conf, target, min_opts, max_opts=None):
+    """Check that all the required options from 'min_opts'
+    are present for 'target' in 'conf' and there are no options
+    not listed in the allowed options list 'max_opts'
+    (same as 'min_opts' if None).
+
+    Note that both option sets from 'target' and corresponding
+    plugin are considered."""
     def no_special_opts(opts):
         return filter(lambda opt: not opt.startswith("_"), opts)
 
