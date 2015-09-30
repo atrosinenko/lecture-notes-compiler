@@ -5,14 +5,14 @@ import sys
 import os.path
 import gettext
 
-_PROGRAM_PATH = os.path.dirname(__file__)
+program_path = os.path.dirname(__file__)
 
 gettext.install("lnc",
-                os.path.join(_PROGRAM_PATH, "lang"),
+                os.path.join(program_path, "lang"),
                 unicode=True)
 
-import lnc.main
-import lnc.ui.cli
+from lnc.main import NotesCompiler
+from lnc.ui.cli import ConsoleUi
 
 _USAGE = _("Usage: {scriptname} <project_dir> <output_name>\n"
     "<output_name> should not contain any extension "
@@ -22,7 +22,7 @@ if len(sys.argv) != 3:
     print(_USAGE.format(scriptname=sys.argv[0]), file=sys.stderr)
     exit(2)
 
-lnc.main.run(lnc.ui.cli,
-                 _PROGRAM_PATH,
-                 sys.argv[1],
-                 sys.argv[2])
+ui = ConsoleUi()
+main = NotesCompiler(ui, program_path, sys.argv[1], sys.argv[2])
+
+main.run()
