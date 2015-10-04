@@ -19,7 +19,7 @@ def _check_plugin_name(name):
 
 
 class NotesCompiler:
-    def __init__(self,ui, program_dir, project_dir, output_name):
+    def __init__(self, ui, program_dir, project_dir, output_name):
         """
         'program_dir' is a base directory of the program (as string)
                       that contains the main configuration file
@@ -39,7 +39,7 @@ class NotesCompiler:
         self.conf = ConfigParser.SafeConfigParser(defaults)
 
 
-    def _load_plugins(self):
+    def load_plugins(self):
         # Load all plug-ins listed in config
         self.plugins = dict()
         for section in self.conf.sections():
@@ -94,41 +94,47 @@ class NotesCompiler:
             if self.plugins[plugname] == None:
                 self.conf.remove_section("__" + plugname + "__")
 
-
     def process_target(self, target_index):
-        target = self.targets[target_index]
-        msg = get_option(self.conf, target, "__msg__",
-            _("Running {target}...").format(target=target))
+        plugin = self.targets[target_index]
+        msg = get_option(self.conf, plugin.target, "__msg__",
+            _("Running {target}...").format(target=plugin.target))
         self.ui.progress_before(target_index + 1, len(self.targets), msg)
-        self.plugins[get_plugin(self.conf, target)].before_tasks(self.conf, target)
-        tasks = self.plugins[get_plugin(self.conf, target)].get_tasks(self.conf, target)
+        plugin.before_tasks()
+        tasks = plugin.get_tasks()
         jobs = self.conf.getint("global", "jobs")
-        v = Variables(self.ui, target, tasks)
+        v = Variables(self.ui, plugin.target, tasks)
         run_tasks_in_parallel(v, jobs)
         self.ui.progress_after()
-        self.plugins[get_plugin(self.conf, target)].after_tasks(self.conf, target)
+        plugin.after_tasks()
         self.ui.progress_finalize()
         if (v.errors):
             exc = [err[1] for
-                err in v.errors if
-                isinstance(err[0], Exception)]
-            self.ui.error("[" + target + "] " + "\n===\n\n".join(exc))
-
+                   err in v.errors if
+                   isinstance(err[0], Exception)]
+            self.ui.error("[" + plugin.target + "] " + "\n===\n\n".join(exc))
 
     def do_plugins_pretest(self):
-        for target in self.targets:
+        for plugin in self.targets:
             try:
-                self.plugins[get_plugin(self.conf, target)].test(self.conf, target)
+                plugin.test()
             except ProgramError as err:
-                self.ui.error(_("Error for target '{target}':\n{error}").format(target=target, error=err), title=_("Preliminary check error"))
+                self.ui.error(_("Error for target '{target}':\n{error}")
+                              .format(target=plugin.target, error=err),
+                              title=_("Preliminary check error"))
 
+    def create_targets(self):
+        target_names = self.conf.get("global", "targets").split()
+        self.targets = []
+        for name in target_names:
+            plugin = self.plugins[get_plugin(self.conf, name)]
+            self.targets.append(plugin.Plugin(self.conf, name))
 
     def run(self):
         self.load_global_config()
-        self._load_plugins()
+        self.load_plugins()
         self.load_project_config()
         self.drop_failed_plugins()
-        self.targets = self.conf.get("global", "targets").split()
+        self.create_targets()
 
         self.do_plugins_pretest()
         for target_index in range(len(self.targets)):
@@ -137,7 +143,7 @@ class NotesCompiler:
             except ProgramError as err:
                 self.ui.progress_finalize(True)
                 self.ui.error(_("[{target}] {error}'")
-                          .format(target=self.targets[target_index], error=err))
+                          .format(target=self.targets[target_index].target, error=err))
             except KeyboardInterrupt:
                 self.ui.progress_finalize(True)
                 exit(1)

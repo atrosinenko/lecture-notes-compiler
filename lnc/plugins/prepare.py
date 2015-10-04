@@ -1,10 +1,9 @@
 from __future__ import unicode_literals
 
-import os
 import os.path
 import ConfigParser
 
-from lnc.lib.options import get_option, check_target_options
+from lnc.plugins.base_plugin import BasePlugin
 from lnc.lib.process import cmd_run, _COMMAND_NOT_FOUND_MSG
 from lnc.lib.io import mkdir_p, filter_regexp, needs_update, _IMG_EXT
 from lnc.lib.exceptions import ProgramError
@@ -27,27 +26,6 @@ _POSSIBLE_TRANSFORM_OPTIONS = set(["justconvert",
                                    "blur",
                                    "fuzz"
                                 ])
-
-
-def test(conf, target):
-    check_target_options(conf, target, ["pages-dir",
-                                        "input-dir",
-                                        "transform-file"])
-    # Check for presence of ImageMagick
-    cmd_run(["convert", "-version"],
-            fail_msg=_COMMAND_NOT_FOUND_MSG.format(command="convert",
-                                                  package="ImageMagick"))
-
-
-def before_tasks(conf, target):
-    pages_dir = get_option(conf, target, "pages-dir")
-
-    mkdir_p(pages_dir)
-
-    # Temporarly disable multithreading because
-    # ImageMagick handles this by itself
-    conf.set("global", "__saved-jobs", conf.get("global", "jobs"))
-    conf.set("global", "jobs", "1")
 
 
 def _check_and_normalize_chop(filename, chop, chop_background):
@@ -174,41 +152,62 @@ def handler(info):
     cmd_run(cmd)
 
 
-def get_tasks(conf, target):
-    input_dir = get_option(conf, target, "input-dir")
-    pages_dir = get_option(conf, target, "pages-dir")
-    transform_file = get_option(conf, target, "transform-file")
+class Plugin(BasePlugin):
+    def test(self):
+        self._check_target_options(["pages-dir",
+                                    "input-dir",
+                                    "transform-file"])
+        # Check for presence of ImageMagick
+        cmd_run(["convert", "-version"],
+                fail_msg=_COMMAND_NOT_FOUND_MSG.format(command="convert",
+                                                       package="ImageMagick"))
 
-    dirs = filter_regexp(input_dir, r"^[0-9]+-[0-9]+$")
+    def before_tasks(self):
+        pages_dir = self._get_option("pages-dir")
 
-    # Handle multiple files in different input subdirectories
-    input_files = {}
-    for subdir in sorted(dirs):
-        img_re = r"^[0-9]+[.]" + _IMG_EXT + "$"
-        images = filter_regexp(os.path.join(input_dir, subdir),
-                               img_re,
-                               "(%s)|(%s)" % (img_re, transform_file))
-        for image_file in images:
-            num = int(image_file[:image_file.index(".")])
-            input_files[num] = os.path.join(input_dir, subdir, image_file)
+        mkdir_p(pages_dir)
 
-    res = []
-    for num in input_files.keys():
-        input_file_dir = os.path.dirname(input_files[num])
-        x = {
-                "__handler__": handler,
-                "input": input_files[num],
-                "output": os.path.join(pages_dir, "%04d.pnm" % num),
-                "num": num,
-                "transform-file": os.path.join(input_file_dir,
-                                               transform_file)
-            }
-        if (needs_update(x["input"], x["output"]) or
-            needs_update(x["transform-file"], x["output"])):
-            res.append(x)
-    return res
+        # Temporarily disable multithreading because
+        # ImageMagick handles this by itself
+        jobs = self.conf.get("global", "jobs")
+        self.conf.set("global", "__saved-jobs", jobs)
+        self.conf.set("global", "jobs", "1")
 
+    def get_tasks(self):
+        input_dir = self._get_option("input-dir")
+        pages_dir = self._get_option("pages-dir")
+        transform_file = self._get_option("transform-file")
 
-def after_tasks(conf, target):
-    conf.set("global", "jobs", conf.get("global", "__saved-jobs"))
-    conf.remove_option("global", "__saved-jobs")
+        dirs = filter_regexp(input_dir, r"^[0-9]+-[0-9]+$")
+
+        # Handle multiple files in different input subdirectories
+        input_files = {}
+        for subdir in sorted(dirs):
+            img_re = r"^[0-9]+[.]" + _IMG_EXT + "$"
+            images = filter_regexp(os.path.join(input_dir, subdir),
+                                   img_re,
+                                   "(%s)|(%s)" % (img_re, transform_file))
+            for image_file in images:
+                num = int(image_file[:image_file.index(".")])
+                input_files[num] = os.path.join(input_dir, subdir, image_file)
+
+        res = []
+        for num in input_files.keys():
+            input_file_dir = os.path.dirname(input_files[num])
+            x = {
+                    "__handler__": handler,
+                    "input": input_files[num],
+                    "output": os.path.join(pages_dir, "%04d.pnm" % num),
+                    "num": num,
+                    "transform-file": os.path.join(input_file_dir,
+                                                   transform_file)
+                }
+            if (needs_update(x["input"], x["output"]) or
+                    needs_update(x["transform-file"], x["output"])):
+                res.append(x)
+        return res
+
+    def after_tasks(self):
+        saved_jobs = self.conf.get("global", "__saved-jobs")
+        self.conf.set("global", "jobs", saved_jobs)
+        self.conf.remove_option("global", "__saved-jobs")
