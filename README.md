@@ -7,6 +7,7 @@ Its main features are:
 * support for incremental builds
 * ability to do its work in parallel on several processor cores
 
+For stable versions see [releases](https://github.com/atrosinenko/lecture-notes-compiler/releases) page.
 For the installation instruction, documentation, etc. please see the
 `doc/` subdirectory.
 
