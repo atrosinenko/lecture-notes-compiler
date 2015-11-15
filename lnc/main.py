@@ -1,6 +1,5 @@
 from __future__ import unicode_literals
 
-import os
 import os.path
 import threading
 import ConfigParser
@@ -12,83 +11,142 @@ from lnc.lib.options import get_option
 
 PACK = "lnc"
 
-
 def _is_plugin_load_section(name):
     return (len(name) > 4 and name.startswith("__") and name.endswith("__"))
-
 
 def _check_plugin_name(name):
     return all(ch.isalnum() or ch == "_" for ch in name)
 
 
-def _load_plugins(ui, conf):
-    # Load all plug-ins listed in config
-    plugins = dict()
-    for section in conf.sections():
-        if not _is_plugin_load_section(section):
-            continue
-        plugname = section[2:-2]
-        if not _check_plugin_name(plugname):
-            ui.warning(_("Plugin name should only contain letters, digits"
-                         "and underscores. Plugin '{plugname}' "
-                         "was not loaded.").format(plugname=plugname))
+class NotesCompiler:
+    def __init__(self, ui, program_dir, project_dir, output_name):
+        """
+        'program_dir' is a base directory of the program (as string)
+                      that contains the main configuration file
+        'project_dir' is a base directory of project
+        'output_name' is a common output file name to which various
+                      extensions will be added
+        """
+        self.ui = ui
+        self.program_dir = program_dir
+        self.project_dir = project_dir
+        self.output_name = output_name
+        defaults = {
+                "_OUTPUT": self.output_name,
+                "_PROJECT": self.project_dir,
+                "_SEP": os.sep
+        }
+        self.conf = ConfigParser.SafeConfigParser(defaults)
+
+
+    def load_plugins(self):
+        # Load all plug-ins listed in config
+        self.plugins = dict()
+        for section in self.conf.sections():
+            if not _is_plugin_load_section(section):
+                continue
+            plugname = section[2:-2]
+            if not _check_plugin_name(plugname):
+                self.ui.warning(_("Plugin name should only contain letters, digits"
+                             "and underscores. Plugin '{plugname}' "
+                             "was not loaded.").format(plugname=plugname))
+            try:
+                self.plugins[plugname] = __import__(PACK + ".plugins." + plugname,
+                                               fromlist=PACK)
+            except ImportError as err:
+                self.ui.error(_("Cannot load plugin '{plugname}:\n{error}'")
+                         .format(plugname=plugname, error=err))
+
+
+    def load_global_config(self):
+        filename = os.path.join(self.program_dir, "config.ini")
         try:
-            plugins[plugname] = __import__(PACK + ".plugins." + plugname,
-                                           fromlist=PACK)
-        except ImportError as err:
-            ui.error(_("Cannot load plugin '{plugname}:\n{error}'")
-                     .format(plugname=plugname, error=err))
-    return plugins
+            with open(filename, "rt") as conffile:
+                self.conf.readfp(conffile)
+        except (IOError, ConfigParser.Error) as err:
+            self.ui.error(_("Error on reading config file {file}:\n{error}").format(file=filename, error=err))
+
+        # Set PATH
+        if not self.conf.has_option("global", "PATH"):
+            self.ui.error(_("No PATH parameter in config file {file}")
+                      .format(file=filename))
+        os.environ["PATH"] = self.conf.get("global", "PATH")
 
 
-def _initialize(ui, program_dir, project_dir, output_name):
-    defaults = {
-            "_OUTPUT": output_name,
-            "_PROJECT": project_dir,
-            "_SEP": os.sep
-    }
+    def load_project_config(self):
+        filename = os.path.join(self.project_dir, "project.ini")
+        try:
+            self.conf.read(filename)
+        except ConfigParser.Error as err:
+            self.ui.error(_("Parsing error for config file {file}:\n{error}").format(file=filename, error=err))
 
-    conf = ConfigParser.SafeConfigParser(defaults)
+        # Project config file is not allowed to load plug-ins
+        for section in self.conf.sections():
+            if (_is_plugin_load_section(section) and section[2:-2] not in self.plugins.keys()):
+                self.ui.warning(_("Plug-in loading is only possible from "
+                        "main config.ini file. Section '{section}' ignored.").
+                    format(section=section))
+                self.conf.remove_section(section)
 
-    filename = os.path.join(program_dir, "config.ini")
-    try:
-        with open(filename, "rt") as conffile:
-            conf.readfp(conffile)
-    except (IOError, ConfigParser.Error) as err:
-        ui.error(_("Error on reading config file {file}:\n{error}").
-                 format(file=filename, error=err))
 
-    # Set PATH
-    if not conf.has_option("global", "PATH"):
-        ui.error(_("No PATH parameter in config file {file}")
-                  .format(file=filename))
-    os.environ["PATH"] = conf.get("global", "PATH")
+    def drop_failed_plugins(self):
+        for plugname in self.plugins.keys():
+            if self.plugins[plugname] == None:
+                self.conf.remove_section("__" + plugname + "__")
 
-    plugins = _load_plugins(ui, conf)
+    def process_target(self, target_index):
+        plugin = self.targets[target_index]
+        msg = get_option(self.conf, plugin.target, "__msg__",
+            _("Running {target}...").format(target=plugin.target))
+        self.ui.progress_before(target_index + 1, len(self.targets), msg)
+        plugin.before_tasks()
+        tasks = plugin.get_tasks()
+        jobs = self.conf.getint("global", "jobs")
+        v = Variables(self.ui, plugin.target, tasks)
+        run_tasks_in_parallel(v, jobs)
+        self.ui.progress_after()
+        plugin.after_tasks()
+        self.ui.progress_finalize()
+        if (v.errors):
+            exc = [err[1] for
+                   err in v.errors if
+                   isinstance(err[0], Exception)]
+            self.ui.error("[" + plugin.target + "] " + "\n===\n\n".join(exc))
 
-    # Project config file cannot load plug-ins
-    filename = os.path.join(project_dir, "project.ini")
-    try:
-        conf.read(filename)
-    except ConfigParser.Error as err:
-        ui.error(_("Parsing error for config file {file}:\n{error}")
-                  .format(file=filename, error=err))
+    def do_plugins_pretest(self):
+        for plugin in self.targets:
+            try:
+                plugin.test()
+            except ProgramError as err:
+                self.ui.error(_("Error for target '{target}':\n{error}")
+                              .format(target=plugin.target, error=err),
+                              title=_("Preliminary check error"))
 
-    # Remove newly added plug-in sections
-    for section in conf.sections():
-        if (_is_plugin_load_section(section) and
-                section[2:-2] not in plugins.keys()):
-            ui.warning(_("Plug-in loading is only possible from "
-                         "main config.ini file. Section '{section}' ignored.")
-                       .format(section=section))
-            conf.remove_section(section)
+    def create_targets(self):
+        target_names = self.conf.get("global", "targets").split()
+        self.targets = []
+        for name in target_names:
+            plugin = self.plugins[get_plugin(self.conf, name)]
+            self.targets.append(plugin.Plugin(self.conf, name))
 
-    # Remove failed plug-ins
-    for plugname in plugins.keys():
-        if plugins[plugname] == None:
-            conf.remove_section("__" + plugname + "__")
+    def run(self):
+        self.load_global_config()
+        self.load_plugins()
+        self.load_project_config()
+        self.drop_failed_plugins()
+        self.create_targets()
 
-    return conf, plugins
+        self.do_plugins_pretest()
+        for target_index in range(len(self.targets)):
+            try:
+                self.process_target(target_index)
+            except ProgramError as err:
+                self.ui.progress_finalize(True)
+                self.ui.error(_("[{target}] {error}'")
+                          .format(target=self.targets[target_index].target, error=err))
+            except KeyboardInterrupt:
+                self.ui.progress_finalize(True)
+                exit(1)
 
 
 class WorkerThread(threading.Thread):
@@ -130,69 +188,10 @@ class Variables:
         self.errors = []
 
 
-def run(ui, program_dir, project_dir, output_name):
-    """Dispatches other functions.
-
-    'program_dir' is a base directory of the program (as string)
-                  that contains the main configuration file
-    'project_dir' is a base directory of project
-    'output_name' is a common output file name to which various
-                  extensions will be added
-    """
-
-    conf, plugins = _initialize(ui, program_dir, project_dir, output_name)
-
-    targets = conf.get("global", "targets").split()
-
-    # Preliminary tests
-    for target in targets:
-        try:
-            plugins[get_plugin(conf, target)].test(conf, target)
-        except ProgramError as err:
-            ui.error(_("Error for target '{target}':\n{error}")
-                            .format(target=target, error=err),
-                      title=_("Preliminary check error"),)
-
-    for cur, target in enumerate(targets):
-        progress_shown = False
-        try:
-            msg = get_option(conf, target, "__msg__",
-                             _("Running {target}...")
-                             .format(target=target))
-            ui.progress_before(cur + 1, len(targets), msg)
-            progress_shown = True
-
-            plugins[get_plugin(conf, target)].before_tasks(conf, target)
-            tasks = plugins[get_plugin(conf, target)].get_tasks(conf, target)
-
-            v = Variables(ui, target, tasks)
-
-            ui.progress_current(0)
-
-            jobs = conf.getint("global", "jobs")
-            thrs = [WorkerThread(v) for i in xrange(jobs)]
-            for thread in thrs:
-                thread.start()
-            for thread in thrs:
-                thread.join()
-
-            ui.progress_after()
-            plugins[get_plugin(conf, target)].after_tasks(conf, target)
-            ui.progress_finalize()
-            progress_shown = False
-
-            if(v.errors):
-                exc = [err[1]
-                       for err in v.errors
-                       if isinstance(err[0], Exception)]
-                ui.error("[" + target + "] " + "\n===\n\n".join(exc))
-
-        except ProgramError as err:
-            if(progress_shown):
-                ui.progress_finalize(True)
-            ui.error(_("[{target}] {error}'")
-                      .format(target=target, error=err))
-        except KeyboardInterrupt:
-            if progress_shown:
-                ui.progress_finalize(True)
-            exit(1)
+def run_tasks_in_parallel(v, jobs):
+    thrs = [WorkerThread(v) for i in xrange(jobs)]
+    v.ui.progress_current(0)
+    for thread in thrs:
+        thread.start()
+    for thread in thrs:
+        thread.join()

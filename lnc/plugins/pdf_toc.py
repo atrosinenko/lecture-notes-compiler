@@ -4,21 +4,9 @@ import os
 import shutil
 import base64
 
-from lnc.lib.options import get_option, check_target_options
+from lnc.plugins.base_plugin import BasePlugin
 from lnc.lib.process import cmd_run, _COMMAND_NOT_FOUND_MSG
 from lnc.lib.toc import generate_toc
-
-
-def test(conf, target):
-    check_target_options(conf, target, ["toc-file",
-                                        "tmp-file",
-                                        "pdf-file",
-                                        "pdf-tmp-file"
-                                       ])
-
-    cmd_run(["gs", "--version"],
-            fail_msg=_COMMAND_NOT_FOUND_MSG.format(command="gs",
-                                                  package="GhostScript"))
 
 
 def _write_entry(f, level, entry):
@@ -39,32 +27,35 @@ def _write_entry(f, level, entry):
         _write_entry(f, level + 1, e)
 
 
-def before_tasks(conf, target):
-    toc_file = get_option(conf, target, "toc-file")
-    tmp_file = get_option(conf, target, "tmp-file")
-    pdf_file = get_option(conf, target, "pdf-file")
-    pdf_tmp_file = get_option(conf, target, "pdf-tmp-file")
+class Plugin(BasePlugin):
+    def test(self):
+        self._check_target_options(["toc-file",
+                                    "tmp-file",
+                                    "pdf-file",
+                                    "pdf-tmp-file"])
 
-    generate_toc(toc_file, tmp_file, _write_entry)
+        cmd_run(["gs", "--version"],
+                fail_msg=_COMMAND_NOT_FOUND_MSG.format(command="gs",
+                                                       package="GhostScript"))
 
-    cmd = ["gs",
-           "-dNOPAUSE",
-           "-dBATCH",
-           "-q",
-           "-dSAFER",
-           "-sDEVICE=pdfwrite",
-           "-sOutputFile=%s" % pdf_tmp_file,
-           pdf_file,
-           tmp_file]
+    def before_tasks(self):
+        toc_file = self._get_option("toc-file")
+        tmp_file = self._get_option("tmp-file")
+        pdf_file = self._get_option("pdf-file")
+        pdf_tmp_file = self._get_option("pdf-tmp-file")
 
-    cmd_run(cmd)
-    os.remove(pdf_file)
-    shutil.move(pdf_tmp_file, pdf_file)
+        generate_toc(toc_file, tmp_file, _write_entry)
 
+        cmd = ["gs",
+               "-dNOPAUSE",
+               "-dBATCH",
+               "-q",
+               "-dSAFER",
+               "-sDEVICE=pdfwrite",
+               "-sOutputFile=%s" % pdf_tmp_file,
+               pdf_file,
+               tmp_file]
 
-def get_tasks(conf, target):
-    return []
-
-
-def after_tasks(conf, target):
-    pass
+        cmd_run(cmd)
+        os.remove(pdf_file)
+        shutil.move(pdf_tmp_file, pdf_file)
