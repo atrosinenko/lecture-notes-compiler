@@ -17,10 +17,7 @@ def _write_entry(f, level, entry):
 
     title = base64.b16encode((entry[1][0:125]).encode("utf-16be"))
     print("%s[%s/Title <FEFF%s> /Page %d /OUT pdfmark" %
-            (" " * (4 * level),
-             count_str,
-             title,
-             entry[0]),
+          (" " * (4 * level), count_str, title, entry[0]),
           file=f)
 
     for e in entry[2:]:
@@ -34,9 +31,9 @@ class Plugin(BasePlugin):
                                     "pdf-file",
                                     "pdf-tmp-file"])
 
-        cmd_run(["gs", "--version"],
-                fail_msg=_COMMAND_NOT_FOUND_MSG.format(command="gs",
-                                                       package="GhostScript"))
+        cmd_run(["gs", "--version"], fail_msg=_COMMAND_NOT_FOUND_MSG.format(
+            command="gs",
+            package="GhostScript"))
 
     def before_tasks(self):
         toc_file = self._get_option("toc-file")

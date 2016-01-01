@@ -25,9 +25,9 @@ class Plugin(BasePlugin):
                                     "tmp-file",
                                     "djvu-file"])
 
-        cmd_try_run("djvused",
-                    fail_msg=_COMMAND_NOT_FOUND_MSG.format(command="djvused",
-                                                           package="DjVuLibre"))
+        cmd_try_run("djvused", fail_msg=_COMMAND_NOT_FOUND_MSG.format(
+            command="djvused",
+            package="DjVuLibre"))
 
     def before_tasks(self):
         toc_file = self._get_option("toc-file")

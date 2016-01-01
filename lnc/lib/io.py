@@ -19,10 +19,9 @@ def filter_regexp(path, regex, error_regex=None):
         error_regex = regex
     er = re.compile(error_regex)
     if not all(map(er.match, list_)):
-        raise ProgramError(
-                _("Extra elements in the '{dir}' directory: {elems}")
-                .format(dir=path,
-                        elems=filter(lambda x: not er.match(x), list_)))
+        raise ProgramError(_(
+            "Extra elements in the '{dir}' directory: {elems}")
+            .format(dir=path, elems=filter(lambda x: not er.match(x), list_)))
     r = re.compile(regex)
     return filter(r.match, list_)
 

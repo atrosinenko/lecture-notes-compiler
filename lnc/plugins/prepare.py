@@ -9,48 +9,50 @@ from lnc.lib.io import mkdir_p, filter_regexp, needs_update, _IMG_EXT
 from lnc.lib.exceptions import ProgramError
 
 
-_DEFAULT_TRANSFORM_OPTIONS = {"justconvert": "no",
-                              "chop-edge": "None",
-                              "rotate-odd": "0",
-                              "rotate-even": "0",
-                              "blur": "10",
-                              "fuzz": "30"
-                             }
+_DEFAULT_TRANSFORM_OPTIONS = {
+    "justconvert": "no",
+    "chop-edge": "None",
+    "rotate-odd": "0",
+    "rotate-even": "0",
+    "blur": "10",
+    "fuzz": "30"}
 
-_POSSIBLE_TRANSFORM_OPTIONS = set(["justconvert",
-                                   "chop-edge",
-                                   "chop-size",
-                                   "chop-background",
-                                   "rotate-odd",
-                                   "rotate-even",
-                                   "blur",
-                                   "fuzz"
-                                ])
+_POSSIBLE_TRANSFORM_OPTIONS = set([
+    "justconvert",
+    "chop-edge",
+    "chop-size",
+    "chop-background",
+    "rotate-odd",
+    "rotate-even",
+    "blur",
+    "fuzz"])
 
 
 def _check_and_normalize_chop(filename, chop, chop_background):
     POSSIBLE_CHOP_VALUES = set(["north", "east", "south", "west"])
 
     if "none" in chop and chop != set(["none"]):
-        raise ProgramError(_("Error in '{file}' file: "
-                             "'none' should not be combined with "
-                             "something other as 'chop-edge' value.")
-                           .format(file=filename))
+        raise ProgramError(_(
+            "Error in '{file}' file: "
+            "'none' should not be combined with "
+            "something other as 'chop-edge' value.")
+            .format(file=filename))
 
     if chop == set(["none"]):
         chop = set([])
 
     if not chop <= POSSIBLE_CHOP_VALUES:
-        raise ProgramError(_("Error in '{file}' file: "
-                             "incorrect values for 'chop-edge' option: {vals}")
-                            .format(file=filename,
-                                   vals=(chop - POSSIBLE_CHOP_VALUES)))
+        raise ProgramError(_(
+            "Error in '{file}' file: "
+            "incorrect values for 'chop-edge' option: {vals}")
+            .format(file=filename, vals=(chop - POSSIBLE_CHOP_VALUES)))
 
     if not chop_background.isalnum():
-        raise ProgramError(_("Error in '{file}' file: "
-                             "'chop-background' value should contain onle "
-                             "letters and digits.")
-                            .format(file=filename))
+        raise ProgramError(_(
+            "Error in '{file}' file: "
+            "'chop-background' value should contain onle "
+            "letters and digits.")
+            .format(file=filename))
     return chop
 
 
@@ -105,8 +107,9 @@ def handler(info):
         with open(transform_file, "rt") as conffile:
             config.readfp(conffile)
     except (IOError, ConfigParser.Error) as err:
-        raise ProgramError(_("Cannot read config file '{file}':\n{error}")
-                           .format(file=transform_file, error=err))
+        raise ProgramError(_(
+            "Cannot read config file '{file}':\n{error}")
+            .format(file=transform_file, error=err))
 
     try:
         justconvert = config.getboolean("transform", "justconvert")
@@ -122,14 +125,15 @@ def handler(info):
             fuzz = config.getint("transform", "fuzz")
 
         if not set(config.options("transform")) <= _POSSIBLE_TRANSFORM_OPTIONS:
-            raise ProgramError(_("Unhandled extra options in "
-                                 "'{file}' file: {opts}.")
-                               .format(file=transform_file,
-                                       opts=(config.options("transform") -
-                                             _POSSIBLE_TRANSFORM_OPTIONS)))
+            raise ProgramError(_(
+                "Unhandled extra options in '{file}' file: {opts}.")
+                .format(file=transform_file,
+                        opts=(config.options("transform") -
+                              _POSSIBLE_TRANSFORM_OPTIONS)))
     except (ConfigParser.Error, ValueError) as err:
-        raise ProgramError(_("Incorrect '{file}' file:\n{error}")
-                           .format(file=transform_file, error=err))
+        raise ProgramError(_(
+            "Incorrect '{file}' file:\n{error}")
+            .format(file=transform_file, error=err))
 
     if justconvert:
         cmd_run(["convert", info["input"], info["output"]])
@@ -158,9 +162,9 @@ class Plugin(BasePlugin):
                                     "input-dir",
                                     "transform-file"])
         # Check for presence of ImageMagick
-        cmd_run(["convert", "-version"],
-                fail_msg=_COMMAND_NOT_FOUND_MSG.format(command="convert",
-                                                       package="ImageMagick"))
+        cmd_run(["convert", "-version"], fail_msg=_COMMAND_NOT_FOUND_MSG.format(
+            command="convert",
+            package="ImageMagick"))
 
     def before_tasks(self):
         pages_dir = self._get_option("pages-dir")

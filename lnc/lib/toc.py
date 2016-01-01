@@ -6,20 +6,22 @@ from lnc.lib.exceptions import ProgramError
 from lnc.lib.io import mkdir_p
 
 
-_TOC_READ_ERROR_MSG = _("Error while reading Table of Contents file "
-                       "'{file}':\n{error}")
+_TOC_READ_ERROR_MSG = _(
+    "Error while reading Table of Contents file '{file}':\n{error}")
 
-_ENCODING_ERROR_MSG = _("Incorrect encoding name at the first line of file.")
+_ENCODING_ERROR_MSG = _(
+    "Incorrect encoding name at the first line of file.")
 
-_TOC_WRITE_ERROR_MSG = _("Error while writing temporary "
-                        "Table of Contents file '{file}:\n"
-                        "{error}'")
+_TOC_WRITE_ERROR_MSG = _(
+    "Error while writing temporary "
+    "Table of Contents file '{file}:\n{error}'")
 
-_TOC_LINE_FORMAT_ERROR_MSG = _("Line {linenum}: incorrect syntax. Should be:\n"
-                              "<several '*'> <page number> <description>")
+_TOC_LINE_FORMAT_ERROR_MSG = _(
+    "Line {linenum}: incorrect syntax. Should be:\n"
+    "<several '*'> <page number> <description>")
 
-_TOC_NESTING_ERROR_MSG = _("Any line should be no more one level more nested "
-                          "than previous one.")
+_TOC_NESTING_ERROR_MSG = _(
+    "Any line should be no more one level more nested than previous one.")
 
 
 def _parse_line(filename, line_num, line):
@@ -114,7 +116,6 @@ def read_toc(toc_file):
 
     lines = _parse_file(toc_file, encoding)
 
-
     def f(pos):
         """Returns [next_pos, partial_result]"""
         level = lines[pos][0]
@@ -148,8 +149,9 @@ def generate_toc(input_file_name, output_file_name, entry_writer,
         with open(input_file_name, "rt") as input_file:
             toc = read_toc(input_file)
     except IOError as err:
-        raise ProgramError(_TOC_READ_ERROR_MSG.format(file=input_file_name,
-                                                     error=err))
+        raise ProgramError(_TOC_READ_ERROR_MSG.format(
+            file=input_file_name,
+            error=err))
     mkdir_p(os.path.dirname(output_file_name))
 
     try:
@@ -159,8 +161,9 @@ def generate_toc(input_file_name, output_file_name, entry_writer,
                 entry_writer(output_file, 0, entry)
             print(footer, file=output_file)
     except IOError as err:
-        raise ProgramError(_TOC_WRITE_ERROR_MSG.format(file=output_file_name,
-                                                      error=err))
+        raise ProgramError(_TOC_WRITE_ERROR_MSG.format(
+            file=output_file_name,
+            error=err))
 
 
 def escape(line, chars):

@@ -2,6 +2,7 @@ from __future__ import print_function, unicode_literals
 
 import sys
 
+
 class ConsoleUi:
     def __init__(self, bar_length=50):
         self.is_progress_active = False

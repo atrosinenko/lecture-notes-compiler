@@ -25,12 +25,12 @@ class Plugin(BasePlugin):
                                     "out-cache-dir",
                                     "pdf-file"])
 
-        cmd_run(["convert", "-version"],
-                fail_msg=_COMMAND_NOT_FOUND_MSG.format(command="convert",
-                                                      package="ImageMagick"))
-        cmd_run(["gs", "--version"],
-                fail_msg=_COMMAND_NOT_FOUND_MSG.format(command="gs",
-                                                      package="GhostScript"))
+        cmd_run(["convert", "-version"], fail_msg=_COMMAND_NOT_FOUND_MSG.format(
+            command="convert",
+            package="ImageMagick"))
+        cmd_run(["gs", "--version"], fail_msg=_COMMAND_NOT_FOUND_MSG.format(
+            command="gs",
+            package="GhostScript"))
 
     def before_tasks(self):
         out_cache_dir = self._get_option("out-cache-dir")
@@ -75,6 +75,5 @@ class Plugin(BasePlugin):
                  "-dBATCH",
                  "-dSAFER",
                  "-sDEVICE=pdfwrite",
-                 "-sOutputFile=%s" % pdf_file
-                ] +
+                 "-sOutputFile=%s" % pdf_file] +
                 input_files)

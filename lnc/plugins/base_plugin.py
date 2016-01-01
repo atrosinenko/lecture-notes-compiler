@@ -1,5 +1,4 @@
 from lnc.lib.options import get_option, check_target_options
-from lnc.lib.process import cmd_run, _COMMAND_NOT_FOUND_MSG
 
 
 class BasePlugin:

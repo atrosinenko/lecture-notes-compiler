@@ -25,13 +25,12 @@ class Plugin(BasePlugin):
                                     "out-cache-dir",
                                     "djvu-file"])
 
-        cmd_try_run("c44",
-                    fail_msg=_COMMAND_NOT_FOUND_MSG.format(command="c44",
-                                                          package="DjVuLibre")
-                    )
-        cmd_try_run("djvm",
-                    fail_msg=_COMMAND_NOT_FOUND_MSG.format(command="djvm",
-                                                          package="DjVuLibre"))
+        cmd_try_run("c44", fail_msg=_COMMAND_NOT_FOUND_MSG.format(
+            command="c44",
+            package="DjVuLibre"))
+        cmd_try_run("djvm", fail_msg=_COMMAND_NOT_FOUND_MSG.format(
+            command="djvm",
+            package="DjVuLibre"))
 
     def before_tasks(self):
         out_cache_dir = self._get_option("out-cache-dir")

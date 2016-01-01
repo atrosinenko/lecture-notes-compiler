@@ -14,13 +14,14 @@ def get_plugin(conf, target):
         try:
             plugname = conf.get(target, "__plugin__")
         except ConfigParser.Error as err:
-            raise PluginError(_("There are problems with option '__plugin__' "
-                                 "in the '{target}' section:\n{error}")
-                               .format(target=target, error=err))
+            raise PluginError(_(
+                "There are problems with option '__plugin__' "
+                "in the '{target}' section:\n{error}")
+                .format(target=target, error=err))
     else:
         plugname = target
 
     if not conf.has_section("__" + plugname + "__"):
-        raise PluginError(_("Unknown plugin: {plugin}.")
-                          .format(plugin=plugname))
+        raise PluginError(_(
+            "Unknown plugin: {plugin}.").format(plugin=plugname))
     return plugname

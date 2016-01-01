@@ -11,8 +11,10 @@ from lnc.lib.options import get_option
 
 PACK = "lnc"
 
+
 def _is_plugin_load_section(name):
     return (len(name) > 4 and name.startswith("__") and name.endswith("__"))
+
 
 def _check_plugin_name(name):
     return all(ch.isalnum() or ch == "_" for ch in name)
@@ -38,7 +40,6 @@ class NotesCompiler:
         }
         self.conf = ConfigParser.SafeConfigParser(defaults)
 
-
     def load_plugins(self):
         # Load all plug-ins listed in config
         self.plugins = dict()
@@ -47,16 +48,18 @@ class NotesCompiler:
                 continue
             plugname = section[2:-2]
             if not _check_plugin_name(plugname):
-                self.ui.warning(_("Plugin name should only contain letters, digits"
-                             "and underscores. Plugin '{plugname}' "
-                             "was not loaded.").format(plugname=plugname))
+                self.ui.warning(_(
+                    "Plugin name should only contain letters, digits"
+                    "and underscores. Plugin '{plugname}' was not loaded.")
+                    .format(plugname=plugname))
             try:
-                self.plugins[plugname] = __import__(PACK + ".plugins." + plugname,
-                                               fromlist=PACK)
+                self.plugins[plugname] = __import__(
+                    PACK + ".plugins." + plugname,
+                    fromlist=PACK)
             except ImportError as err:
-                self.ui.error(_("Cannot load plugin '{plugname}:\n{error}'")
-                         .format(plugname=plugname, error=err))
-
+                self.ui.error(_(
+                    "Cannot load plugin '{plugname}:\n{error}'")
+                    .format(plugname=plugname, error=err))
 
     def load_global_config(self):
         filename = os.path.join(self.program_dir, "config.ini")
@@ -64,30 +67,35 @@ class NotesCompiler:
             with open(filename, "rt") as conffile:
                 self.conf.readfp(conffile)
         except (IOError, ConfigParser.Error) as err:
-            self.ui.error(_("Error on reading config file {file}:\n{error}").format(file=filename, error=err))
+            self.ui.error(_(
+                "Error on reading config file {file}:\n{error}")
+                .format(file=filename, error=err))
 
         # Set PATH
         if not self.conf.has_option("global", "PATH"):
-            self.ui.error(_("No PATH parameter in config file {file}")
-                      .format(file=filename))
+            self.ui.error(_(
+                "No PATH parameter in config file {file}")
+                .format(file=filename))
         os.environ["PATH"] = self.conf.get("global", "PATH")
-
 
     def load_project_config(self):
         filename = os.path.join(self.project_dir, "project.ini")
         try:
             self.conf.read(filename)
         except ConfigParser.Error as err:
-            self.ui.error(_("Parsing error for config file {file}:\n{error}").format(file=filename, error=err))
+            self.ui.error(_(
+                "Parsing error for config file {file}:\n{error}")
+                .format(file=filename, error=err))
 
         # Project config file is not allowed to load plug-ins
         for section in self.conf.sections():
-            if (_is_plugin_load_section(section) and section[2:-2] not in self.plugins.keys()):
-                self.ui.warning(_("Plug-in loading is only possible from "
-                        "main config.ini file. Section '{section}' ignored.").
-                    format(section=section))
+            if (_is_plugin_load_section(section) and
+                    section[2:-2] not in self.plugins.keys()):
+                self.ui.warning(_(
+                    "Plug-in loading is only possible from "
+                    "main config.ini file. Section '{section}' ignored.")
+                    .format(section=section))
                 self.conf.remove_section(section)
-
 
     def drop_failed_plugins(self):
         for plugname in self.plugins.keys():
@@ -96,7 +104,8 @@ class NotesCompiler:
 
     def process_target(self, target_index):
         plugin = self.targets[target_index]
-        msg = get_option(self.conf, plugin.target, "__msg__",
+        msg = get_option(
+            self.conf, plugin.target, "__msg__",
             _("Running {target}...").format(target=plugin.target))
         self.ui.progress_before(target_index + 1, len(self.targets), msg)
         plugin.before_tasks()
@@ -142,8 +151,9 @@ class NotesCompiler:
                 self.process_target(target_index)
             except ProgramError as err:
                 self.ui.progress_finalize(True)
-                self.ui.error(_("[{target}] {error}'")
-                          .format(target=self.targets[target_index].target, error=err))
+                self.ui.error(_("[{target}] {error}'").format(
+                    target=self.targets[target_index].target,
+                    error=err))
             except KeyboardInterrupt:
                 self.ui.progress_finalize(True)
                 exit(1)

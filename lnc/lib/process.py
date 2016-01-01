@@ -6,19 +6,21 @@ from lnc.lib.exceptions import ExtCommandError
 import os
 
 
-_COMMAND_NOT_FOUND_MSG = _("Something wrong with '{command}' command. "
-                          "Probably {package} is not installed or "
-                          "PATH variable in config file is not configured "
-                          "properly (see documentation).")
+_COMMAND_NOT_FOUND_MSG = _(
+    "Something wrong with '{command}' command. "
+    "Probably {package} is not installed or "
+    "PATH variable in config file is not configured "
+    "properly (see documentation).")
 
 
-_COMMAND_EXECUTION_FAILURE = _("Some problems with '{command}' "
-                               "execution:\n{error}")
+_COMMAND_EXECUTION_FAILURE = _(
+    "Some problems with '{command}' execution:\n{error}")
 
 
 def cmd_run(command_line_list, fail_msg=None):
-    """Runs the command specified by 'command_line_list' list and shows errors and raises
-    ExtCommandError if not found or on non-zero error code.
+    """Runs the command specified by 'command_line_list' list
+    and shows errors and raises ExtCommandError if not found
+    or on non-zero error code.
     """
     if not fail_msg:
         fail_msg = _COMMAND_EXECUTION_FAILURE

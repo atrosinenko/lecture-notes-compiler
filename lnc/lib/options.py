@@ -25,14 +25,15 @@ def _get_option(conf, target, option, default=None, func=None):
         if conf.has_section(target) and conf.has_option(target, option):
             value = func(target, option)
     except (ConfigParser.Error, ValueError) as err:
-        raise ProgramError(_("Error while getting value for option '{option}' "
-                             "of target '{target}':\n{error}")
-                           .format(option=option, target=target, error=err))
+        raise ProgramError(_(
+            "Error while getting value for option '{option}' "
+            "of target '{target}':\n{error}")
+            .format(option=option, target=target, error=err))
 
     if value == None:
-        raise NoOptionError(_("Option '{option}' for '{target}' target "
-                              "is not found.")
-                            .format(option=option, target=target))
+        raise NoOptionError(_(
+            "Option '{option}' for '{target}' target is not found.")
+            .format(option=option, target=target))
 
     return value
 
@@ -59,15 +60,15 @@ def check_target_options(conf, target, min_opts, max_opts=None):
     max_opts = set(max_opts)
 
     if not min_opts <= opts:
-        raise ProgramError(_("Some mandatory options for target '{target}'"
-                             "are missing: {opts}.")
-                            .format(target=target,
-                                    opts=(min_opts - opts)))
+        raise ProgramError(_(
+            "Some mandatory options for target '{target}'"
+            "are missing: {opts}.")
+            .format(target=target, opts=(min_opts - opts)))
     if not opts <= max_opts:
-        raise ProgramError(_("Some extra options are given for target "
-                             "'{target}: {opts}'.")
-                            .format(target=target,
-                                    opts=(opts - max_opts)))
+        raise ProgramError(_(
+            "Some extra options are given for target "
+            "'{target}: {opts}'.")
+            .format(target=target, opts=(opts - max_opts)))
 
 
 def get_option(conf, target, option, default=None):
