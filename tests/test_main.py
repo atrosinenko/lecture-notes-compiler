@@ -3,7 +3,7 @@ from __future__ import unicode_literals, print_function
 
 from time import sleep, time
 
-from tests.mock.ui import MockUi
+from mock.ui import MockUi
 import lnc.main
 
 
