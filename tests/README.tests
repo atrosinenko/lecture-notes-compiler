@@ -1,0 +1,13 @@
+This directory contains tests for lecture-notes-compiler.
+
+Use "python -m pytest" from the root repo directory to run these tests.
+
+Please note that the tests/ directory should NOT have an __init__.py file inside
+(but its subdirectories should). According to pytest rules, modules residing
+in the tests/ directory should be imported without specifing the "tests" package
+such as:
+
+# correct
+import mock.ui
+# incorrect
+import tests.mock.ui
