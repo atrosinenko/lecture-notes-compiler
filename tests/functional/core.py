@@ -1,37 +1,113 @@
 from PIL import Image, ImageDraw
+import subprocess
 
 
 class ProjectBuilder:
-    def __init__(self):
-        self.images = []
+    """Test project generation and result validation facility.
 
-    def create_image(self):
-        image = TestImage()
-        self.images.append(image)
+    ProjectBuilder writes test project to the directory specified,
+    runs lnc on it and checks results. It uses the TestImage class to
+    write test images and recognize processed output images and OutputChecker
+    class to process particular output format.
+    """
+
+    def __init__(self, path):
+        """Create ProjectBuilder instance that will write project to path."""
+
+        self._used_images = []
+        # A sequence of images to check generated output against
+
+        self._image_files = []
+        # An array of (file path, TestImage) for all registered used
+        # and unused images
+
+        self._path = path
+        # Path to write project to
+
+        self._next_id = 1
+        # ID of the next created image (either used or unused)
+
+        self._use_color = True
+        # Whether to use color images or not
+
+        self._toc = None
+
+    def set_color(self, use_color):
+        """Toggle color image usage on/off.
+
+        If False is passed, use black-white images for testing,
+        is True is passed (the default) use color images.
+        """
+
+        self._use_color = use_color
+
+    def create_used_image(self, directory, name):
+        """Create and return a TestImage that should present in the output.
+
+        Creates an image at input/directory/name that will be checked
+        for presence in the output sequence in the order of calls to
+        this function.
+        """
+
+        image = self._create_image(directory, name)
+        self._used_images.append(image)
         return image
 
-    def run_test(self):
-        self.save_images()
-        self.save_TOC()
-        self.save_config()
-        self.run_program()
-        self.check()
+    def create_unused_image(self, directory, name):
+        """Create and return a TestImage that should not present in the output.
+
+        Creates an image that will be placed to input/directory/name file but
+        will not be checked against when checking for output correctness.
+        """
+
+        return self._create_image(directory, name)
 
     def save_images(self):
-        for image in self.images:
-            image.save()
+        """Write input image files at the places specified."""
+        for path, image in self._image_files:
+            path.ensure()
+            image.save(str(path))
 
-    def save_TOC(self):
+    def save_raw_toc(self, contents):
+        self._path.join("toc.txt").write(contents)
+
+    def save_toc(self, toc):
         pass
 
-    def save_config(self):
-        pass
+    def save_transform_ini(self, directory, contents):
+        """Write contents as the transform.ini for the directory specified."""
+        path = self._path.join("input").join(directory).join("transform.ini")
+        path.write(contents)
+
+    def save_config(self, contents):
+        """Write project configuration contents."""
+        self._path.join("project.ini").write(contents)
 
     def run_program(self):
-        pass
+        """Run lnc on the project generated."""
+        assert subprocess.call(["./lnc.py", str(self._path), "output"]) == 0
 
-    def check(self):
-        pass
+    def check(self, checker_class):
+        """Check generated output.
+
+        Returns True if output is correct and False otherwise."""
+
+        checker = checker_class(self._path)
+        if len(self._used_images) != checker.image_count():
+            return False
+        if not checker.check_toc(self._toc):
+            return False
+        for i, image in enumerate(self._used_images):
+            if not checker.check_image_at_index(i, image):
+                return False
+        return True
+
+    def _create_image(self, directory, name):
+        image = TestImage(self._next_id, self._use_color)
+        filepath = self._path.join("input").join(directory).join(name)
+        self._next_id += 1
+        self._image_files.append((filepath, image))
+        return image
 
 
 """ Main image layout (supposed to persist lossy compression):
@@ -211,19 +287,35 @@ class TestImage:
 
 
 class OutputChecker:
-    def __init__(self, filename):
+    """Abstract helper class that parses generated output of lnc."""
+
+    def __init__(self, path):
+        """Create checker for project located at path."""
+        self._path = path
+
+    def image_count(self):
+        """Return total image count in the resulting sequence."""
         pass
 
-    def check(self, projectBuilder):
-        current = 0
-        for image in projectBuilder.images:
-            if image.forOutput:
-                image.check(self.get_image_at_index(current))
-                current += 1
-        self.check_TOC(projectBuilder.toc)
-
-    def get_image_at_index(self):
+    def check_image_at_index(self, index, reference_image):
+        """Checks that image at given index is valid. Returns boolean."""
         pass
 
-    def check_TOC(self, toc):
+    def check_toc(self, toc):
         pass
+
+
+class PreparedImagesOutputChecker(OutputChecker):
+    def __init__(self, path):
+        output_dir = path.join("cache").join("pages")
+        self._output_files = sorted(output_dir.listdir())
+
+    def image_count(self):
+        return len(self._output_files)
+
+    def check_image_at_index(self, index, reference_image):
+        filename = str(self._output_files[index])
+        return reference_image.check(filename)
+
+    def check_toc(self, toc):
+        return True
