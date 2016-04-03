@@ -1,3 +1,5 @@
+from __future__ import print_function, unicode_literals
+
 from PIL import Image, ImageDraw
 import subprocess
 
@@ -174,11 +176,15 @@ class TestImage:
         borders = self._total_borders(is_processed=True)
         xsize, ysize = self._image_size_with_borders(borders)
         real_xsize, real_ysize = image.size
+        print("Size: real =", (real_xsize, real_ysize),
+              "expected =", (xsize, ysize))
         if ((self._use_color and image.mode != "RGB") or
             (not self._use_color and image.mode == "RGB")):
+            print("Incorrect colorspace.")
             return False
         if not (abs(xsize - real_xsize) < 10 and
                 abs(ysize - real_ysize) < 10):
+            print("Incorrect size.")
             return False
 
         side = _IMAGE_SQUARE_SIDE
@@ -186,17 +192,19 @@ class TestImage:
         y1 = borders[0]
         x2 = x1 + (_IMAGE_BIT_COUNT + 2) * side
         y2 = y1 + 3 * side
-        edge_color = (0, 0, 0) if self._use_color else 128
-        if not (self._check_color(image, x1, y1, edge_color) and
-                self._check_color(image, x1, y2 - side, edge_color) and
-                self._check_color(image, x2 - side, y1, edge_color) and
-                self._check_color(image, x2 - side, y2 - side, edge_color)):
+        corner_color = (0, 0, 0) if self._use_color else 128
+        if not (self._check_color(image, x1, y1, corner_color) and
+                self._check_color(image, x1, y2 - side, corner_color) and
+                self._check_color(image, x2 - side, y1, corner_color) and
+                self._check_color(image, x2 - side, y2 - side, corner_color)):
+            print("Incorrect corners")
             return False
 
         x = x2 - 2 * side
         y = y2 - 2 * side
         for color in self._bit_colors():
             if not self._check_color(image, x, y, color):
+                print("Incorrect color at x =", x)
                 return False
             x -= side
         return True
@@ -222,13 +230,13 @@ class TestImage:
         draw.rectangle([x1, y1, x2, y2], fill="white")
 
         if self._use_color:
-            edge_color = "black"
+            corner_color = "black"
         else:
-            edge_color = 128
-        draw.rectangle([x1, y1, x1 + side, y1 + side], fill=edge_color)
-        draw.rectangle([x1, y2 - side, x1 + side, y2], fill=edge_color)
-        draw.rectangle([x2 - side, y1, x2, y1 + side], fill=edge_color)
-        draw.rectangle([x2 - side, y2 - side, x2, y2], fill=edge_color)
+            corner_color = 128
+        draw.rectangle([x1, y1, x1 + side, y1 + side], fill=corner_color)
+        draw.rectangle([x1, y2 - side, x1 + side, y2], fill=corner_color)
+        draw.rectangle([x2 - side, y1, x2, y1 + side], fill=corner_color)
+        draw.rectangle([x2 - side, y2 - side, x2, y2], fill=corner_color)
 
         x = x2 - 2 * side
         y = y2 - 2 * side
