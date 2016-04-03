@@ -3,6 +3,9 @@ from __future__ import print_function, unicode_literals
 from PIL import Image, ImageDraw
 import subprocess
 
+from pdfminer.pdfparser import PDFParser
+from pdfminer.pdfdocument import PDFDocument, PDFNoOutlines
+
 
 class ProjectBuilder:
     """Test project generation and result validation facility.
@@ -70,11 +73,24 @@ class ProjectBuilder:
             path.ensure()
             image.save(str(path))
 
-    def save_raw_toc(self, contents):
-        self._path.join("toc.txt").write(contents)
-
     def save_toc(self, toc):
-        pass
+        """Write TOC file.
+
+        Accepts list of lists describing TOC entries:
+        [
+            [level, pagenum, description],
+            [level, pagenum, description],
+            ...
+        ]
+        The last saved TOC will be used for validation.
+        """
+
+        self._toc = toc
+        with self._path.join("toc.txt").open(mode="w", ensure=True) as tocfile:
+            print("utf8", file=tocfile)
+            for entry in toc:
+                line = "%s %d %s" % ("*" * entry[0], entry[1], entry[2])
+                print(line, file=tocfile)
 
     def save_transform_ini(self, directory, contents):
         """Write contents as the transform.ini for the directory specified."""
@@ -366,7 +382,33 @@ class PDFDocumentChecker(DocumentOutputChecker):
         return "pdf"
 
     def check_toc(self, toc):
+        with open(str(self._doc), "rb") as pdffile:
+            parser = PDFParser(pdffile)
+            document = PDFDocument(parser)
+            try:
+                real_toc = list(document.get_outlines())
+            except PDFNoOutlines:
+                return len(toc) == 0
+            print("TOC from PDF file:", real_toc)
+            if len(real_toc) != len(toc):
+                print("Incorrect TOC length")
+                return False
+            for ref, real in zip(toc, real_toc):
+                if not ref[0] + 1 == real[0]:
+                    # level
+                    return False
+                if not self._is_reference_to_ith_page(real[2][0], ref[1] - 1):
+                    # destination
+                    return False
+                if not ref[2] == real[1]:
+                    # title
+                    return False
         return True
+
+    def _is_reference_to_ith_page(self, reference, i):
+        page = reference.resolve()
+        page_refs = page['Parent'].resolve()['Kids']
+        return page_refs[i].resolve() == page
 
 
 class DjVuDocumentChecker(DocumentOutputChecker):
