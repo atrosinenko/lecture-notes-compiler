@@ -95,11 +95,14 @@ class ProjectBuilder:
         Returns True if output is correct and False otherwise."""
 
         checker = checker_class(self._path)
+        print("Checking image count...")
         if len(self._used_images) != checker.image_count():
             return False
+        print("Checking TOC...")
         if not checker.check_toc(self._toc):
             return False
         for i, image in enumerate(self._used_images):
+            print("Checking image at index:", i)
             if not checker.check_image_at_index(i, image):
                 return False
         return True
@@ -308,31 +311,66 @@ class OutputChecker:
 
     def __init__(self, path):
         """Create checker for project located at path."""
-        self._path = path
+        output_dir = self._create_dir_with_images(path)
+        self._output_files = sorted(output_dir.listdir())
 
     def image_count(self):
         """Return total image count in the resulting sequence."""
-        pass
+        return len(self._output_files)
 
     def check_image_at_index(self, index, reference_image):
         """Checks that image at given index is valid. Returns boolean."""
-        pass
+        filename = str(self._output_files[index])
+        return reference_image.check(filename)
 
     def check_toc(self, toc):
         pass
 
+    def _create_dir_with_images(self, path):
+        """Create directory with page sequence 0000.png, 0001.png, ..."""
+        pass
+
 
 class PreparedImagesOutputChecker(OutputChecker):
+    def _create_dir_with_images(self, path):
+        # The directory already exists
+        return path.join("cache").join("pages")
+
+    def check_toc(self, toc):
+        # Nothing to check
+        return True
+
+
+class DocumentOutputChecker(OutputChecker):
     def __init__(self, path):
-        output_dir = path.join("cache").join("pages")
-        self._output_files = sorted(output_dir.listdir())
+        self._doc = path.join("output").join("output." + self._extension())
+        OutputChecker.__init__(self, path)
 
-    def image_count(self):
-        return len(self._output_files)
+    def _create_dir_with_images(self, path):
+        output_dir = path.join("temp_for_" + self._extension())
+        output_dir.ensure(dir=True)
+        subprocess.call([
+            "convert",
+            str(self._doc),
+            str(output_dir.join("%04d.png"))])
+        return output_dir
 
-    def check_image_at_index(self, index, reference_image):
-        filename = str(self._output_files[index])
-        return reference_image.check(filename)
+    def _extension(self):
+        """Return output file extension."""
+        pass
+
+
+class PDFDocumentChecker(DocumentOutputChecker):
+    def _extension(self):
+        return "pdf"
+
+    def check_toc(self, toc):
+        return True
+
+
+class DjVuDocumentChecker(DocumentOutputChecker):
+    def _extension(self):
+        return "djvu"
 
     def check_toc(self, toc):
         return True

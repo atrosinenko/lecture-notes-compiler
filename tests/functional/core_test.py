@@ -1,12 +1,19 @@
 from pytest import fixture
 
-from functional.core import *
+from functional.core import (
+        ProjectBuilder,
+        PreparedImagesOutputChecker,
+        PDFDocumentChecker,
+        DjVuDocumentChecker)
 
 
 @fixture()
 def checker_classes():
     """ Run all checkers in one test for optimization reason. """
-    return [PreparedImagesOutputChecker]
+    return [
+        PreparedImagesOutputChecker,
+        PDFDocumentChecker,
+        DjVuDocumentChecker]
 
 
 @fixture()
