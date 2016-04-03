@@ -282,8 +282,11 @@ class TestImage:
                     tr += r
                     tg += g
                     tb += b
-            for a, b in zip(color, (tr / count, tg / count, tb / count)):
-                if abs(a - b) > 10:
+            real_color = (tr / count, tg / count, tb / count)
+            for a, b in zip(color, real_color):
+                if abs(a - b) > 35:
+                    print("Color mismatch: real =", real_color,
+                          "expected =", color)
                     return False
             return True
         else:
@@ -291,7 +294,13 @@ class TestImage:
             for i in range(side):
                 for j in range(side):
                     t += image.getpixel((x + i, y + j))
-            return abs(color - t / count) <= 10
+            real_color = t / count
+            if abs(color - real_color) > 35:
+                print("Color mismatch: real =", real_color,
+                      "expected =", color)
+                return False
+            else:
+                return True
 
 
 class OutputChecker:
