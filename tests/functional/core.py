@@ -352,6 +352,7 @@ class DocumentOutputChecker(OutputChecker):
         subprocess.call([
             "convert",
             str(self._doc),
+            "-alpha", "off",
             str(output_dir.join("%04d.png"))])
         return output_dir
 
