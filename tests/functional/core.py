@@ -416,4 +416,101 @@ class DjVuDocumentChecker(DocumentOutputChecker):
         return "djvu"
 
     def check_toc(self, toc):
+        raw_toc = unicode(subprocess.check_output([
+            "djvused",
+            str(self._doc),
+            "-e",
+            "print-outline"]), "utf8")
+
+        if raw_toc.strip() == "":
+            return len(toc) == 0
+
+        tokens = self._tokenize_raw_toc(raw_toc)
+        real_toc = self._parse_toc(tokens)
+        print("expected toc:", toc)
+        print("real toc:", real_toc)
+        if len(toc) != len(real_toc):
+            return False
+        for a, b in zip(toc, real_toc):
+            if a != b:
+                return False
         return True
+
+    def _tokenize_raw_toc(self, data):
+        """Tokenize output of djvused (some subset of what is described in the man page).
+
+        Returns list of pairs (type, value) where type is one of the following:
+        "(", ")" -- parentheses
+        "str" -- string
+        "sym" -- symbol
+        """
+        ind = 0
+        length = len(data)
+        res = []
+        while ind < length:
+            # ind points at the beginning of token or at whitespace in between
+            while ind < length and data[ind] in " \t\r\n":
+                ind += 1
+            if ind >= length:
+                break
+
+            # Now ind points at the beginning of some token
+            if data[ind] in "()":
+                # parentheses
+                res.append((data[ind], None))
+                ind += 1
+            elif data[ind].isalpha() or data[ind] in "_#":
+                # symbol
+                j = ind + 1
+                while j < length and (data[j].isalnum() or data[j] in "_-#"):
+                    j += 1
+                res.append(("sym", data[ind:j]))
+                ind = j
+            else:
+                # string
+                assert data[ind] == "\""
+                s = ""
+                ind += 1
+                while data[ind] != "\"":
+                    if data[ind] == "\\":
+                        if data[ind + 1] == "n":
+                            s += "\n"
+                        elif data[ind + 1] == "\\":
+                            s += "\\"
+                        elif data[ind + 1] == "\n":
+                            s += "\n"
+                        else:
+                            assert False
+                        ind += 2
+                    else:
+                        s += data[ind]
+                        ind += 1
+                ind += 1  # skip \"
+                res.append(("str", s))
+        return res
+
+    def _parse_toc(self, tokens):
+        assert tokens[0] == ("(", None)
+        assert tokens[1] == ("sym", "bookmarks")
+        assert tokens[2] == ("(", None)
+        depth = 0
+        descr = None
+        page = None
+        res = []
+        for tok in tokens[3:]:
+            if tok[0] == "str":
+                if descr is None:
+                    descr = tok[1]
+                elif page is None:
+                    page = int(tok[1][1:])
+                    res.append([depth, page, descr])
+                else:
+                    assert False
+            elif tok[0] == "(":
+                descr = page = None
+                depth += 1
+            elif tok[0] == ")":
+                depth -= 1
+            else:
+                assert False
+        return res

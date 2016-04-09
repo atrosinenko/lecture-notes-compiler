@@ -18,7 +18,7 @@ def checker_classes():
 
 @fixture()
 def toc_checker_classes():
-    return [PDFDocumentChecker]
+    return [PDFDocumentChecker, DjVuDocumentChecker]
 
 
 @fixture()
