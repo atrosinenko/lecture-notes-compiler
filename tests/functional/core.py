@@ -105,7 +105,7 @@ class ProjectBuilder:
         """Run lnc on the project generated."""
         assert subprocess.call(["./lnc.py", str(self._path), "output"]) == 0
 
-    def check(self, checker_class):
+    def valid(self, checker_class):
         """Check generated output.
 
         Returns True if output is correct and False otherwise."""
@@ -115,11 +115,11 @@ class ProjectBuilder:
         if len(self._used_images) != checker.image_count():
             return False
         print("Checking TOC...")
-        if not checker.check_toc(self._toc):
+        if not checker.valid_toc(self._toc):
             return False
         for i, image in enumerate(self._used_images):
             print("Checking image at index:", i)
-            if not checker.check_image_at_index(i, image):
+            if not checker.valid_image_at_index(i, image):
                 return False
         return True
 
@@ -191,7 +191,7 @@ class TestImage:
     def save(self, filename):
         self.create_image().save(filename)
 
-    def check_image(self, image):
+    def valid_image(self, image):
         borders = self._total_borders(is_processed=True)
         xsize, ysize = self._image_size_with_borders(borders)
         real_xsize, real_ysize = image.size
@@ -228,8 +228,8 @@ class TestImage:
             x -= side
         return True
 
-    def check(self, filename):
-        return self.check_image(Image.open(filename))
+    def valid(self, filename):
+        return self.valid_image(Image.open(filename))
 
     def _draw_borders(self, draw, xsize, ysize):
         x1 = 0
@@ -334,12 +334,12 @@ class OutputChecker:
         """Return total image count in the resulting sequence."""
         return len(self._output_files)
 
-    def check_image_at_index(self, index, reference_image):
+    def valid_image_at_index(self, index, reference_image):
         """Checks that image at given index is valid. Returns boolean."""
         filename = str(self._output_files[index])
-        return reference_image.check(filename)
+        return reference_image.valid(filename)
 
-    def check_toc(self, toc):
+    def valid_toc(self, toc):
         pass
 
     def _create_dir_with_images(self, path):
@@ -352,7 +352,7 @@ class PreparedImagesOutputChecker(OutputChecker):
         # The directory already exists
         return path.join("cache").join("pages")
 
-    def check_toc(self, toc):
+    def valid_toc(self, toc):
         # Nothing to check
         return True
 
@@ -381,7 +381,7 @@ class PDFDocumentChecker(DocumentOutputChecker):
     def _extension(self):
         return "pdf"
 
-    def check_toc(self, toc):
+    def valid_toc(self, toc):
         with open(str(self._doc), "rb") as pdffile:
             parser = PDFParser(pdffile)
             document = PDFDocument(parser)
@@ -415,7 +415,7 @@ class DjVuDocumentChecker(DocumentOutputChecker):
     def _extension(self):
         return "djvu"
 
-    def check_toc(self, toc):
+    def valid_toc(self, toc):
         raw_toc = unicode(subprocess.check_output([
             "djvused",
             str(self._doc),

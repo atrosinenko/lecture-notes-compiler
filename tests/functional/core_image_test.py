@@ -3,12 +3,12 @@ from functional.core import TestImage
 
 def check_valid(source_image, reference_image):
     data = source_image.create_image()
-    assert reference_image.check_image(data)
+    assert reference_image.valid_image(data)
 
 
 def check_invalid(source_image, reference_image):
     data = source_image.create_image()
-    assert not reference_image.check_image(data)
+    assert not reference_image.valid_image(data)
 
 
 def test_image_check_valid_color():
@@ -129,7 +129,7 @@ def test_image_check_valid_file(tmpdir):
     image2 = TestImage(123, True)
     filename = str(tmpdir.join("image.jpg"))
     image1.save(filename)
-    assert image2.check(filename)
+    assert image2.valid(filename)
 
 
 def test_image_check_invalid_file(tmpdir):
@@ -137,4 +137,4 @@ def test_image_check_invalid_file(tmpdir):
     image2 = TestImage(321, True)
     filename = str(tmpdir.join("image.jpg"))
     image1.save(filename)
-    assert not image2.check(filename)
+    assert not image2.valid(filename)

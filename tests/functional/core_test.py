@@ -35,12 +35,12 @@ def put_transform_contents(builder, directory):
 
 def check_all_valid(builder, checkers):
     for class_ in checkers:
-        assert builder.check(class_)
+        assert builder.valid(class_)
 
 
 def check_all_invalid(builder, checkers):
     for class_ in checkers:
-        assert not builder.check(class_)
+        assert not builder.valid(class_)
 
 
 def test_checker_valid_page(builder, checker_classes):
