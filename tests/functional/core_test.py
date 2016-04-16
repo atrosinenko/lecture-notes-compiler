@@ -1,7 +1,7 @@
 from pytest import fixture
 
 from functional.core import (
-        ProjectBuilder,
+        builder,
         PreparedImagesOutputChecker,
         PDFDocumentChecker,
         DjVuDocumentChecker)
@@ -19,11 +19,6 @@ def checker_classes():
 @fixture()
 def toc_checker_classes():
     return [PDFDocumentChecker, DjVuDocumentChecker]
-
-
-@fixture()
-def builder(tmpdir):
-    return ProjectBuilder(tmpdir)
 
 
 def put_transform_contents(builder, directory):

@@ -1,5 +1,6 @@
 from __future__ import print_function, unicode_literals
 
+from pytest import fixture
 from PIL import Image, ImageDraw
 import subprocess
 
@@ -36,6 +37,9 @@ class ProjectBuilder:
         # Whether to use color images or not
 
         self._toc = None
+
+    def path(self):
+        return self._path
 
     def set_color(self, use_color):
         """Toggle color image usage on/off.
@@ -94,7 +98,8 @@ class ProjectBuilder:
 
     def save_transform_ini(self, directory, contents):
         """Write contents as the transform.ini for the directory specified."""
-        path = self._path.join("input").join(directory).join("transform.ini")
+        path = self._path.join("input", directory, "transform.ini")
+        path.ensure()
         path.write(contents)
 
     def save_config(self, contents):
@@ -129,6 +134,11 @@ class ProjectBuilder:
         self._next_id += 1
         self._image_files.append((filepath, image))
         return image
+
+
+@fixture()
+def builder(tmpdir):
+    return ProjectBuilder(tmpdir)
 
 
 """ Main image layout (supposed to persist lossy compression):
