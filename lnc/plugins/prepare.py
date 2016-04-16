@@ -52,7 +52,7 @@ def _check_and_normalize_chop(filename, chop, chop_background):
     if not chop_background.isalnum():
         raise ProgramError(_(
             "Error in '{file}' file: "
-            "'chop-background' value should contain onle "
+            "'chop-background' value should contain only "
             "letters and digits.")
             .format(file=filename))
     return chop
