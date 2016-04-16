@@ -12,6 +12,8 @@ from lnc.lib.exceptions import ProgramError
 _DEFAULT_TRANSFORM_OPTIONS = {
     "justconvert": "no",
     "chop-edge": "None",
+    "chop-size": "0",
+    "chop-background": "black",
     "rotate-odd": "0",
     "rotate-even": "0",
     "blur": "10",
@@ -114,11 +116,9 @@ def handler(info):
     try:
         justconvert = config.getboolean("transform", "justconvert")
         if not justconvert:
-            chop = config.get("transform", "chop-edge").split()
-            chop = set(map(lambda x: x.lower(), chop))
-            if "none" not in chop:
-                chop_size = config.getint("transform", "chop-size")
-                chop_background = config.get("transform", "chop-background")
+            chop = set(config.get("transform", "chop-edge").lower().split())
+            chop_size = config.getint("transform", "chop-size")
+            chop_background = config.get("transform", "chop-background")
             odd = config.getint("transform", "rotate-odd")
             even = config.getint("transform", "rotate-even")
             blur = config.getint("transform", "blur")
