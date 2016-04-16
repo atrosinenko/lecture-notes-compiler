@@ -99,7 +99,7 @@ def _get_crop_area(info, chop, chop_size, chop_background, blur, fuzz):
         off_x -= chop_size
         sz_x += chop_size
 
-    return "%dx%d%+dx%+d" % (sz_x, sz_y, off_x, off_y)
+    return "%dx%d%+d%+d" % (sz_x, sz_y, off_x, off_y)
 
 
 def handler(info):
