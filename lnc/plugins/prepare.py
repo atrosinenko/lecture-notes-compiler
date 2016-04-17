@@ -128,8 +128,8 @@ def handler(info):
             raise ProgramError(_(
                 "Unhandled extra options in '{file}' file: {opts}.")
                 .format(file=transform_file,
-                        opts=(config.options("transform") -
-                              _POSSIBLE_TRANSFORM_OPTIONS)))
+                        opts=list(set(config.options("transform")) -
+                                  _POSSIBLE_TRANSFORM_OPTIONS)))
     except (ConfigParser.Error, ValueError) as err:
         raise ProgramError(_(
             "Incorrect '{file}' file:\n{error}")
