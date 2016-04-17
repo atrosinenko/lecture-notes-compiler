@@ -124,6 +124,20 @@ def test_image_check_invalid_mixed():
         TestImage(123, True))
 
 
+def test_image_check_valid_rotation():
+    check_valid(
+        TestImage(1, True),
+        TestImage(512, True)
+            .set_validation_rotation(180))
+
+
+def test_image_check_invalid_rotation():
+    check_invalid(
+        TestImage(1, True),
+        TestImage(1, True)
+            .set_validation_rotation(180))
+
+
 def test_image_check_valid_file(tmpdir):
     image1 = TestImage(123, True)
     image2 = TestImage(123, True)

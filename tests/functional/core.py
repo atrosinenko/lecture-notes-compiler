@@ -189,6 +189,9 @@ class TestImage:
         self._borders_count_to_check = 0
         # Count of inner borders that should be retained
 
+        self._validation_rotation_degrees = 0
+        # Rotate before validation
+
     def add_border(self, up, right, down, left, color):
         self._borders.append((up, right, down, left, color))
         self._borders_count_to_check += 1
@@ -213,10 +216,16 @@ class TestImage:
 
         return image
 
+    def set_validation_rotation(self, degrees):
+        self._validation_rotation_degrees = degrees
+        return self
+
     def save(self, filename):
         self.create_image().save(filename)
 
     def valid_image(self, image):
+        if self._validation_rotation_degrees != 0:
+            image = image.rotate(self._validation_rotation_degrees)
         borders = self._total_borders(is_processed=True)
         xsize, ysize = self._image_size_with_borders(borders)
         real_xsize, real_ysize = image.size
