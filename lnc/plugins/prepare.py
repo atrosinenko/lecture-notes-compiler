@@ -95,7 +95,7 @@ def _get_crop_area(info, chop, chop_size, chop_background, blur, fuzz):
         sz_x += chop_size
     if "south" in chop:
         sz_y += chop_size
-    if "east" in chop:
+    if "west" in chop:
         off_x -= chop_size
         sz_x += chop_size
 
