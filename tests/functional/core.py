@@ -100,7 +100,7 @@ class ProjectBuilder:
             print("utf8", file=tocfile)
             for entry in toc:
                 line = "%s %d %s" % ("*" * entry[0], entry[1], entry[2])
-                print(line, file=tocfile)
+                print(line.encode("utf8"), file=tocfile)
 
     def save_transform_ini(self, directory, contents):
         """Write contents as the transform.ini for the directory specified."""
@@ -428,6 +428,7 @@ class PDFDocumentChecker(DocumentOutputChecker):
                 print("Incorrect TOC length")
                 return False
             for ref, real in zip(toc, real_toc):
+                print("Checking", ref)
                 if not ref[0] + 1 == real[0]:
                     # level
                     return False
@@ -450,11 +451,11 @@ class DjVuDocumentChecker(DocumentOutputChecker):
         return "djvu"
 
     def valid_toc(self, toc):
-        raw_toc = unicode(subprocess.check_output([
+        raw_toc = subprocess.check_output([
             "djvused",
             str(self._doc),
             "-e",
-            "print-outline"]), "utf8")
+            "print-outline"])
 
         if raw_toc.strip() == "":
             return len(toc) == 0
@@ -466,6 +467,7 @@ class DjVuDocumentChecker(DocumentOutputChecker):
         if len(toc) != len(real_toc):
             return False
         for a, b in zip(toc, real_toc):
+            print("Checking", a)
             if a != b:
                 return False
         return True
@@ -503,24 +505,32 @@ class DjVuDocumentChecker(DocumentOutputChecker):
             else:
                 # string
                 assert data[ind] == "\""
-                s = ""
+                s = str()
                 ind += 1
                 while data[ind] != "\"":
                     if data[ind] == "\\":
                         if data[ind + 1] == "n":
                             s += "\n"
+                            ind += 2
                         elif data[ind + 1] == "\\":
                             s += "\\"
-                        elif data[ind + 1] == "\n":
-                            s += "\n"
+                            ind += 2
+                        elif data[ind + 1] == "\"":
+                            s += "\""
+                            ind += 2
+                        elif data[ind + 1].isdigit():
+                            j = ind + 1
+                            while j < ind + 4 and data[j].isdigit():
+                                j += 1
+                            s += chr(int(data[ind+1:j], 8))
+                            ind = j
                         else:
                             assert False
-                        ind += 2
                     else:
                         s += data[ind]
                         ind += 1
                 ind += 1  # skip \"
-                res.append(("str", s))
+                res.append(("str", s.decode("utf8")))
         return res
 
     def _parse_toc(self, tokens):
