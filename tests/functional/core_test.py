@@ -70,6 +70,28 @@ def test_checker_valid_order(builder, checker_classes):
     check_all_valid(builder, checker_classes)
 
 
+def test_checker_valid_reference_override(builder, checker_classes):
+    builder.create_used_image("000-001", "0000.jpg")
+    builder.override_reference_image()
+    builder.save_images()
+    builder.save_toc([])
+    put_transform_contents(builder, "000-001")
+    builder.run_program()
+    check_all_valid(builder, checker_classes)
+
+
+def test_checker_invalid_reference_override(builder, checker_classes):
+    (builder.create_used_image("000-001", "0000.jpg")
+        .add_border(20, 20, 20, 20, (0, 0, 0)))
+    (builder.override_reference_image()
+        .add_border(50, 50, 50, 50, (0, 0, 0)))
+    builder.save_images()
+    builder.save_toc([])
+    put_transform_contents(builder, "000-001")
+    builder.run_program()
+    check_all_invalid(builder, checker_classes)
+
+
 def test_checker_invalid_order(builder, checker_classes):
     builder.create_used_image("000-001", "0001.jpg")
     builder.create_used_image("000-001", "0000.jpg")

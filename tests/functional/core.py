@@ -62,6 +62,12 @@ class ProjectBuilder:
         self._used_images.append(image)
         return image
 
+    def override_reference_image(self):
+        """Create reference image to check previous used image against."""
+        image = TestImage(self._next_id - 1, self._use_color)
+        self._used_images[len(self._used_images) - 1] = image
+        return image
+
     def create_unused_image(self, directory, name):
         """Create and return a TestImage that should not present in the output.
 
@@ -171,9 +177,17 @@ _IMAGE_SQUARE_SIDE = 64
 class TestImage:
     def __init__(self, index, use_color):
         self._index = index
+        # ID of image
+
         self._use_color = use_color
+        # Generate and check color images
+
         self._borders = []
+        # List of border sizes and colors (top, right, bottom, left, color)
+        # from inner to outer
+
         self._borders_count_to_check = 0
+        # Count of inner borders that should be retained
 
     def add_border(self, up, right, down, left, color):
         self._borders.append((up, right, down, left, color))
@@ -181,6 +195,7 @@ class TestImage:
         return self
 
     def border_count_to_check(self, count):
+        """Call after all borders are already added."""
         self._borders_count_to_check = count
         return self
 
