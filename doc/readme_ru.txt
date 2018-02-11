@@ -149,7 +149,7 @@ var2: %(def-path)s%(sep)sfolder2
 +-----------------------------------+
 |спичка      спичка      спичка     |
 |+----------------+                 |  [transform]
-||                |                 |  background:  black
+||                |                 |  chop-background:  black
 ||                |                 |  chop-edge:   North
 ||                |                 |  chop-size:   30
 ||                |                 |
