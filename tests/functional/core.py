@@ -1,5 +1,6 @@
 from __future__ import print_function, unicode_literals
 
+from pytest import fixture
 from PIL import Image, ImageDraw
 import subprocess
 
@@ -11,7 +12,7 @@ class ProjectBuilder:
     """Test project generation and result validation facility.
 
     ProjectBuilder writes test project to the directory specified,
-    runs lnc on it and checks results. It uses the TestImage class to
+    runs lnc on it and checks results. It uses the ExampleImage class to
     write test images and recognize processed output images and OutputChecker
     class to process particular output format.
     """
@@ -23,7 +24,7 @@ class ProjectBuilder:
         # A sequence of images to check generated output against
 
         self._image_files = []
-        # An array of (file path, TestImage) for all registered used
+        # An array of (file path, ExampleImage) for all registered used
         # and unused images
 
         self._path = path
@@ -37,6 +38,9 @@ class ProjectBuilder:
 
         self._toc = None
 
+    def path(self):
+        return self._path
+
     def set_color(self, use_color):
         """Toggle color image usage on/off.
 
@@ -47,7 +51,7 @@ class ProjectBuilder:
         self._use_color = use_color
 
     def create_used_image(self, directory, name):
-        """Create and return a TestImage that should present in the output.
+        """Create and return a ExampleImage that should present in the output.
 
         Creates an image at input/directory/name that will be checked
         for presence in the output sequence in the order of calls to
@@ -58,8 +62,14 @@ class ProjectBuilder:
         self._used_images.append(image)
         return image
 
+    def override_reference_image(self):
+        """Create reference image to check previous used image against."""
+        image = ExampleImage(self._next_id - 1, self._use_color)
+        self._used_images[len(self._used_images) - 1] = image
+        return image
+
     def create_unused_image(self, directory, name):
-        """Create and return a TestImage that should not present in the output.
+        """Create and return a ExampleImage that should not present in the output.
 
         Creates an image that will be placed to input/directory/name file but
         will not be checked against when checking for output correctness.
@@ -90,11 +100,12 @@ class ProjectBuilder:
             print("utf8", file=tocfile)
             for entry in toc:
                 line = "%s %d %s" % ("*" * entry[0], entry[1], entry[2])
-                print(line, file=tocfile)
+                print(line.encode("utf8"), file=tocfile)
 
     def save_transform_ini(self, directory, contents):
         """Write contents as the transform.ini for the directory specified."""
-        path = self._path.join("input").join(directory).join("transform.ini")
+        path = self._path.join("input", directory, "transform.ini")
+        path.ensure()
         path.write(contents)
 
     def save_config(self, contents):
@@ -105,7 +116,7 @@ class ProjectBuilder:
         """Run lnc on the project generated."""
         assert subprocess.call(["./lnc.py", str(self._path), "output"]) == 0
 
-    def check(self, checker_class):
+    def valid(self, checker_class):
         """Check generated output.
 
         Returns True if output is correct and False otherwise."""
@@ -115,20 +126,25 @@ class ProjectBuilder:
         if len(self._used_images) != checker.image_count():
             return False
         print("Checking TOC...")
-        if not checker.check_toc(self._toc):
+        if not checker.valid_toc(self._toc):
             return False
         for i, image in enumerate(self._used_images):
             print("Checking image at index:", i)
-            if not checker.check_image_at_index(i, image):
+            if not checker.valid_image_at_index(i, image):
                 return False
         return True
 
     def _create_image(self, directory, name):
-        image = TestImage(self._next_id, self._use_color)
+        image = ExampleImage(self._next_id, self._use_color)
         filepath = self._path.join("input").join(directory).join(name)
         self._next_id += 1
         self._image_files.append((filepath, image))
         return image
+
+
+@fixture()
+def builder(tmpdir):
+    return ProjectBuilder(tmpdir)
 
 
 """ Main image layout (supposed to persist lossy compression):
@@ -158,12 +174,23 @@ _IMAGE_BIT_COUNT = 10
 _IMAGE_SQUARE_SIDE = 64
 
 
-class TestImage:
+class ExampleImage:
     def __init__(self, index, use_color):
         self._index = index
+        # ID of image
+
         self._use_color = use_color
+        # Generate and check color images
+
         self._borders = []
+        # List of border sizes and colors (top, right, bottom, left, color)
+        # from inner to outer
+
         self._borders_count_to_check = 0
+        # Count of inner borders that should be retained
+
+        self._validation_rotation_degrees = 0
+        # Rotate before validation
 
     def add_border(self, up, right, down, left, color):
         self._borders.append((up, right, down, left, color))
@@ -171,6 +198,7 @@ class TestImage:
         return self
 
     def border_count_to_check(self, count):
+        """Call after all borders are already added."""
         self._borders_count_to_check = count
         return self
 
@@ -188,10 +216,19 @@ class TestImage:
 
         return image
 
+    def set_validation_rotation(self, degrees):
+        self._validation_rotation_degrees = degrees
+        return self
+
     def save(self, filename):
         self.create_image().save(filename)
 
-    def check_image(self, image):
+    def valid_image(self, image):
+        if self._validation_rotation_degrees != 0:
+            print("Rotating by", self._validation_rotation_degrees, "degrees")
+            print("Original size:", image.size)
+            image = image.rotate(self._validation_rotation_degrees, expand=True)
+            print("Rotated size: ", image.size)
         borders = self._total_borders(is_processed=True)
         xsize, ysize = self._image_size_with_borders(borders)
         real_xsize, real_ysize = image.size
@@ -228,8 +265,8 @@ class TestImage:
             x -= side
         return True
 
-    def check(self, filename):
-        return self.check_image(Image.open(filename))
+    def valid(self, filename):
+        return self.valid_image(Image.open(filename))
 
     def _draw_borders(self, draw, xsize, ysize):
         x1 = 0
@@ -334,12 +371,12 @@ class OutputChecker:
         """Return total image count in the resulting sequence."""
         return len(self._output_files)
 
-    def check_image_at_index(self, index, reference_image):
+    def valid_image_at_index(self, index, reference_image):
         """Checks that image at given index is valid. Returns boolean."""
         filename = str(self._output_files[index])
-        return reference_image.check(filename)
+        return reference_image.valid(filename)
 
-    def check_toc(self, toc):
+    def valid_toc(self, toc):
         pass
 
     def _create_dir_with_images(self, path):
@@ -352,7 +389,7 @@ class PreparedImagesOutputChecker(OutputChecker):
         # The directory already exists
         return path.join("cache").join("pages")
 
-    def check_toc(self, toc):
+    def valid_toc(self, toc):
         # Nothing to check
         return True
 
@@ -381,7 +418,7 @@ class PDFDocumentChecker(DocumentOutputChecker):
     def _extension(self):
         return "pdf"
 
-    def check_toc(self, toc):
+    def valid_toc(self, toc):
         with open(str(self._doc), "rb") as pdffile:
             parser = PDFParser(pdffile)
             document = PDFDocument(parser)
@@ -394,6 +431,7 @@ class PDFDocumentChecker(DocumentOutputChecker):
                 print("Incorrect TOC length")
                 return False
             for ref, real in zip(toc, real_toc):
+                print("Checking", ref)
                 if not ref[0] + 1 == real[0]:
                     # level
                     return False
@@ -415,12 +453,12 @@ class DjVuDocumentChecker(DocumentOutputChecker):
     def _extension(self):
         return "djvu"
 
-    def check_toc(self, toc):
-        raw_toc = unicode(subprocess.check_output([
+    def valid_toc(self, toc):
+        raw_toc = subprocess.check_output([
             "djvused",
             str(self._doc),
             "-e",
-            "print-outline"]), "utf8")
+            "print-outline"])
 
         if raw_toc.strip() == "":
             return len(toc) == 0
@@ -432,6 +470,7 @@ class DjVuDocumentChecker(DocumentOutputChecker):
         if len(toc) != len(real_toc):
             return False
         for a, b in zip(toc, real_toc):
+            print("Checking", a)
             if a != b:
                 return False
         return True
@@ -469,24 +508,32 @@ class DjVuDocumentChecker(DocumentOutputChecker):
             else:
                 # string
                 assert data[ind] == "\""
-                s = ""
+                s = str()
                 ind += 1
                 while data[ind] != "\"":
                     if data[ind] == "\\":
                         if data[ind + 1] == "n":
                             s += "\n"
+                            ind += 2
                         elif data[ind + 1] == "\\":
                             s += "\\"
-                        elif data[ind + 1] == "\n":
-                            s += "\n"
+                            ind += 2
+                        elif data[ind + 1] == "\"":
+                            s += "\""
+                            ind += 2
+                        elif data[ind + 1].isdigit():
+                            j = ind + 1
+                            while j < ind + 4 and data[j].isdigit():
+                                j += 1
+                            s += chr(int(data[ind+1:j], 8))
+                            ind = j
                         else:
                             assert False
-                        ind += 2
                     else:
                         s += data[ind]
                         ind += 1
                 ind += 1  # skip \"
-                res.append(("str", s))
+                res.append(("str", s.decode("utf8")))
         return res
 
     def _parse_toc(self, tokens):

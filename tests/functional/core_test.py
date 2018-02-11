@@ -1,7 +1,7 @@
 from pytest import fixture
 
 from functional.core import (
-        ProjectBuilder,
+        builder,
         PreparedImagesOutputChecker,
         PDFDocumentChecker,
         DjVuDocumentChecker)
@@ -21,11 +21,6 @@ def toc_checker_classes():
     return [PDFDocumentChecker, DjVuDocumentChecker]
 
 
-@fixture()
-def builder(tmpdir):
-    return ProjectBuilder(tmpdir)
-
-
 def put_transform_contents(builder, directory):
     builder.save_transform_ini(
         directory,
@@ -35,12 +30,12 @@ def put_transform_contents(builder, directory):
 
 def check_all_valid(builder, checkers):
     for class_ in checkers:
-        assert builder.check(class_)
+        assert builder.valid(class_)
 
 
 def check_all_invalid(builder, checkers):
     for class_ in checkers:
-        assert not builder.check(class_)
+        assert not builder.valid(class_)
 
 
 def test_checker_valid_page(builder, checker_classes):
@@ -73,6 +68,28 @@ def test_checker_valid_order(builder, checker_classes):
     put_transform_contents(builder, "000-001")
     builder.run_program()
     check_all_valid(builder, checker_classes)
+
+
+def test_checker_valid_reference_override(builder, checker_classes):
+    builder.create_used_image("000-001", "0000.jpg")
+    builder.override_reference_image()
+    builder.save_images()
+    builder.save_toc([])
+    put_transform_contents(builder, "000-001")
+    builder.run_program()
+    check_all_valid(builder, checker_classes)
+
+
+def test_checker_invalid_reference_override(builder, checker_classes):
+    (builder.create_used_image("000-001", "0000.jpg")
+        .add_border(20, 20, 20, 20, (0, 0, 0)))
+    (builder.override_reference_image()
+        .add_border(50, 50, 50, 50, (0, 0, 0)))
+    builder.save_images()
+    builder.save_toc([])
+    put_transform_contents(builder, "000-001")
+    builder.run_program()
+    check_all_invalid(builder, checker_classes)
 
 
 def test_checker_invalid_order(builder, checker_classes):

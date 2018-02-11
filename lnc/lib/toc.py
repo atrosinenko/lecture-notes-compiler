@@ -18,7 +18,7 @@ _TOC_WRITE_ERROR_MSG = _(
 
 _TOC_LINE_FORMAT_ERROR_MSG = _(
     "Line {linenum}: incorrect syntax. Should be:\n"
-    "<several '*'> <page number> <description>")
+    "<several '*'> <page number starting from 1> <description>")
 
 _TOC_NESTING_ERROR_MSG = _(
     "Any line should be no more one level more nested than previous one.")
@@ -34,6 +34,8 @@ def _parse_line(filename, line_num, line):
             raise ProgramError()
         tmp = line[level:].split(None, 1)
         pagenum = int(tmp[0])
+        if pagenum < 1:
+            raise ProgramError()
         desc = tmp[1]
     except (ProgramError, ValueError, IndexError):
         raise ProgramError(_TOC_READ_ERROR_MSG
@@ -56,7 +58,7 @@ def _parse_file(f, encoding):
 
     lines = [unicode(line.strip(), encoding) for line in f.xreadlines()]
 
-    ret = [_parse_line(f.name, i + 1, line)
+    ret = [_parse_line(f.name, i + 2, line)
            for i, line in enumerate(lines)
            if not (line.isspace() or len(line) == 0)]
 

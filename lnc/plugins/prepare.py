@@ -12,6 +12,8 @@ from lnc.lib.exceptions import ProgramError
 _DEFAULT_TRANSFORM_OPTIONS = {
     "justconvert": "no",
     "chop-edge": "None",
+    "chop-size": "0",
+    "chop-background": "black",
     "rotate-odd": "0",
     "rotate-even": "0",
     "blur": "10",
@@ -50,7 +52,7 @@ def _check_and_normalize_chop(filename, chop, chop_background):
     if not chop_background.isalnum():
         raise ProgramError(_(
             "Error in '{file}' file: "
-            "'chop-background' value should contain onle "
+            "'chop-background' value should contain only "
             "letters and digits.")
             .format(file=filename))
     return chop
@@ -93,11 +95,11 @@ def _get_crop_area(info, chop, chop_size, chop_background, blur, fuzz):
         sz_x += chop_size
     if "south" in chop:
         sz_y += chop_size
-    if "east" in chop:
+    if "west" in chop:
         off_x -= chop_size
         sz_x += chop_size
 
-    return "%dx%d%+dx%+d" % (sz_x, sz_y, off_x, off_y)
+    return "%dx%d%+d%+d" % (sz_x, sz_y, off_x, off_y)
 
 
 def handler(info):
@@ -114,11 +116,9 @@ def handler(info):
     try:
         justconvert = config.getboolean("transform", "justconvert")
         if not justconvert:
-            chop = config.get("transform", "chop-edge").split()
-            chop = set(map(lambda x: x.lower(), chop))
-            if "none" not in chop:
-                chop_size = config.getint("transform", "chop-size")
-                chop_background = config.get("transform", "chop-background")
+            chop = set(config.get("transform", "chop-edge").lower().split())
+            chop_size = config.getint("transform", "chop-size")
+            chop_background = config.get("transform", "chop-background")
             odd = config.getint("transform", "rotate-odd")
             even = config.getint("transform", "rotate-even")
             blur = config.getint("transform", "blur")
