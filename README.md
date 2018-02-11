@@ -1,3 +1,5 @@
+**This project is frozen and not expected to be updated.**
+
 This is a script written to compile PDF and DjVu from image files with
 scanned lecture notes.
 

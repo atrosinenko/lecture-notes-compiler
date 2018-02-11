@@ -1,0 +1,6 @@
+The project is frozen, these are known limitations.
+Nevertheless, even in current state it worked for me.
+
+* There may be some other dependencies between files that are not accounted for
+* Images are not removed from the cache when the original one was deleted
+* EXIF information is probably not handled properly
