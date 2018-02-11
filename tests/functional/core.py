@@ -225,7 +225,10 @@ class ExampleImage:
 
     def valid_image(self, image):
         if self._validation_rotation_degrees != 0:
-            image = image.rotate(self._validation_rotation_degrees)
+            print("Rotating by", self._validation_rotation_degrees, "degrees")
+            print("Original size:", image.size)
+            image = image.rotate(self._validation_rotation_degrees, expand=True)
+            print("Rotated size: ", image.size)
         borders = self._total_borders(is_processed=True)
         xsize, ysize = self._image_size_with_borders(borders)
         real_xsize, real_ysize = image.size
