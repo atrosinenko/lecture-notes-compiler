@@ -12,7 +12,7 @@ class ProjectBuilder:
     """Test project generation and result validation facility.
 
     ProjectBuilder writes test project to the directory specified,
-    runs lnc on it and checks results. It uses the TestImage class to
+    runs lnc on it and checks results. It uses the ExampleImage class to
     write test images and recognize processed output images and OutputChecker
     class to process particular output format.
     """
@@ -24,7 +24,7 @@ class ProjectBuilder:
         # A sequence of images to check generated output against
 
         self._image_files = []
-        # An array of (file path, TestImage) for all registered used
+        # An array of (file path, ExampleImage) for all registered used
         # and unused images
 
         self._path = path
@@ -51,7 +51,7 @@ class ProjectBuilder:
         self._use_color = use_color
 
     def create_used_image(self, directory, name):
-        """Create and return a TestImage that should present in the output.
+        """Create and return a ExampleImage that should present in the output.
 
         Creates an image at input/directory/name that will be checked
         for presence in the output sequence in the order of calls to
@@ -64,12 +64,12 @@ class ProjectBuilder:
 
     def override_reference_image(self):
         """Create reference image to check previous used image against."""
-        image = TestImage(self._next_id - 1, self._use_color)
+        image = ExampleImage(self._next_id - 1, self._use_color)
         self._used_images[len(self._used_images) - 1] = image
         return image
 
     def create_unused_image(self, directory, name):
-        """Create and return a TestImage that should not present in the output.
+        """Create and return a ExampleImage that should not present in the output.
 
         Creates an image that will be placed to input/directory/name file but
         will not be checked against when checking for output correctness.
@@ -135,7 +135,7 @@ class ProjectBuilder:
         return True
 
     def _create_image(self, directory, name):
-        image = TestImage(self._next_id, self._use_color)
+        image = ExampleImage(self._next_id, self._use_color)
         filepath = self._path.join("input").join(directory).join(name)
         self._next_id += 1
         self._image_files.append((filepath, image))
@@ -174,7 +174,7 @@ _IMAGE_BIT_COUNT = 10
 _IMAGE_SQUARE_SIDE = 64
 
 
-class TestImage:
+class ExampleImage:
     def __init__(self, index, use_color):
         self._index = index
         # ID of image
