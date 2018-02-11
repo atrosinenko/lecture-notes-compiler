@@ -58,7 +58,7 @@ def _parse_file(f, encoding):
 
     lines = [unicode(line.strip(), encoding) for line in f.xreadlines()]
 
-    ret = [_parse_line(f.name, i + 1, line)
+    ret = [_parse_line(f.name, i + 2, line)
            for i, line in enumerate(lines)
            if not (line.isspace() or len(line) == 0)]
 
